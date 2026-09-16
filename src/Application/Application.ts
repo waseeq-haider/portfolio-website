@@ -45,7 +45,7 @@ export default class Application {
         instance = this;
 
         // Set Title
-        document.title = 'Waseeq Haider | Cybersecurity Specialist & Web Developer';
+        document.title = 'Waseeq Haider | Cybersecurity Specialist & Software Developer';
 
         // Setup
         this.debug = new Debug();

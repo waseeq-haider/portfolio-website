@@ -7,18 +7,20 @@ const SkillGame = () => {
     const [currentStep, setCurrentStep] = useState(0);
 
     const challenges = [
-        { q: 'Enter the default port for HTTP:', a: '80', skill: 'Network Fundamentals' },
-        { q: 'Identify the tool used for packet sniffing (starts with W):', a: 'wireshark', skill: 'Packet Analysis' },
-        { q: 'Command to list all files in Linux:', a: 'ls', skill: 'Linux Mastery' },
-        { q: 'Nmap flag for service version detection:', a: '-sv', skill: 'Penetration Testing' }
+        { q: 'Enter the default port for secure HTTPS traffic:', a: '443', skill: 'Network Protocols' },
+        { q: 'Network packet sniffer & protocol analyzer (starts with W):', a: 'wireshark', skill: 'Packet Analysis' },
+        { q: 'Leading web vulnerability & intercepting proxy suite (starts with B):', a: 'burp suite', skill: 'Web App Security' },
+        { q: 'Premier open-source penetration testing & exploit framework (starts with M):', a: 'metasploit', skill: 'Exploitation & CEH' },
+        { q: 'Standard command to view file permissions & directories in Linux:', a: 'ls', skill: 'Linux Mastery' },
+        { q: 'Popular network discovery and port scanner utility (starts with N):', a: 'nmap', skill: 'Reconnaissance' }
     ];
 
     const handleInput = (e: React.FormEvent) => {
         e.preventDefault();
-        const normalizedInput = input.toLowerCase().trim();
+        const normalizedInput = input.toLowerCase().trim().replace(/[-_]/g, ' ');
         const currentChallenge = challenges[currentStep];
 
-        if (normalizedInput === currentChallenge.a) {
+        if (normalizedInput === currentChallenge.a || (currentChallenge.a === 'burp suite' && normalizedInput === 'burpsuite')) {
             setTerminalLines(prev => [...prev, `> ${input}`, `[SUCCESS] UNLOCKED: ${currentChallenge.skill}`]);
             if (currentStep + 1 < challenges.length) {
                 setCurrentStep(prev => prev + 1);

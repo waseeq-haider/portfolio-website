@@ -1,14 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import GitHubProjects from './OS/components/GitHubProjects';
+import ResumeView from './OS/components/ResumeView';
+import FeaturedProjects from './OS/components/FeaturedProjects';
+import SkillsMatrix from './OS/components/SkillsMatrix';
+import ContactCard from './OS/components/ContactCard';
 import SkillGame from './OS/components/SkillGame';
 
+interface WindowState {
+    id: string;
+    title: string;
+    icon: string;
+    active: boolean;
+    z: number;
+    minimized?: boolean;
+}
+
 const OS = () => {
-    const [time, setTime] = useState(new Date().toLocaleTimeString());
-    const [windows, setWindows] = useState<any[]>([
-        { id: 'cv', title: 'Waseeq_Resume.exe', icon: '📝', active: true, z: 10 },
-        { id: 'projects', title: 'C:\\Projects\\CyberSecurity', icon: '🔍', active: false, z: 1 },
-        { id: 'game', title: 'Security_Breach_Game.exe', icon: '🎮', active: false, z: 1 },
+    const [time, setTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    const [startMenuOpen, setStartMenuOpen] = useState(false);
+    const [highestZ, setHighestZ] = useState(10);
+    const startMenuRef = useRef<HTMLDivElement>(null);
+
+    const [windows, setWindows] = useState<WindowState[]>([
+        { id: 'cv', title: 'Waseeq_Haider_Resume.doc', icon: '📄', active: true, z: 10 },
+        { id: 'projects', title: 'C:\\Projects\\Software_Showcase.exe', icon: '📁', active: false, z: 1 },
+        { id: 'skills', title: 'C:\\System32\\Skills_Matrix.exe', icon: '🛡️', active: false, z: 1 },
+        { id: 'contact', title: 'C:\\Network\\Direct_Contact.exe', icon: '✉️', active: false, z: 1 },
+        { id: 'game', title: 'Security_Breach_Challenge.exe', icon: '🎮', active: false, z: 1 },
     ]);
 
     useEffect(() => {
@@ -18,193 +36,523 @@ const OS = () => {
         return () => clearInterval(interval);
     }, []);
 
-    const toggleWindow = (id: string) => {
-        setWindows(prev => {
-            const isClosing = prev.find(w => w.id === id)?.active;
-            return prev.map(w => {
-                if (w.id === id) return { ...w, active: !w.active, z: isClosing ? 1 : 100 };
-                return { ...w, z: Math.max(1, w.z - 1) };
-            });
-        });
+    // Close start menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (startMenuRef.current && !startMenuRef.current.contains(e.target as Node)) {
+                setStartMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const focusWindow = (id: string) => {
+        const nextZ = highestZ + 1;
+        setHighestZ(nextZ);
+        setWindows(prev =>
+            prev.map(w => {
+                if (w.id === id) {
+                    return { ...w, active: true, minimized: false, z: nextZ };
+                }
+                return w;
+            })
+        );
     };
 
-    const Window = ({ id, title, children, width = '75%', height = '80%' }: any) => {
+    const toggleWindow = (id: string) => {
+        const win = windows.find(w => w.id === id);
+        if (!win) return;
+
+        if (!win.active || win.minimized) {
+            focusWindow(id);
+        } else {
+            // Minimize or hide
+            setWindows(prev =>
+                prev.map(w => (w.id === id ? { ...w, active: false } : w))
+            );
+        }
+    };
+
+    const closeWindow = (id: string, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        setWindows(prev =>
+            prev.map(w => (w.id === id ? { ...w, active: false } : w))
+        );
+    };
+
+    const minimizeWindow = (id: string, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        setWindows(prev =>
+            prev.map(w => (w.id === id ? { ...w, active: false } : w))
+        );
+    };
+
+    const Window = ({
+        id,
+        title,
+        children,
+        width = '78%',
+        height = '82%',
+        top = '5%',
+        left = '7%',
+    }: {
+        id: string;
+        title: string;
+        children: React.ReactNode;
+        width?: string;
+        height?: string;
+        top?: string;
+        left?: string;
+    }) => {
         const win = windows.find(w => w.id === id);
         if (!win || !win.active) return null;
+
+        const isFocused = win.z === highestZ;
+
         return (
-            <div style={{
-                position: 'absolute',
-                top: id === 'cv' ? '5%' : id === 'game' ? '10%' : '15%',
-                left: id === 'cv' ? '5%' : id === 'game' ? '12%' : '20%',
-                width,
-                height,
-                backgroundColor: '#c0c0c0',
-                border: '2px solid #fff',
-                borderRightColor: '#000',
-                borderBottomColor: '#000',
-                display: 'flex',
-                flexDirection: 'column',
-                zIndex: win.z,
-                boxShadow: '2px 2px 10px rgba(0,0,0,0.5)'
-            }}>
-                <div style={{
-                    backgroundColor: '#000080',
-                    color: '#fff',
-                    padding: '3px 6px',
+            <div
+                onMouseDown={() => focusWindow(id)}
+                style={{
+                    position: 'absolute',
+                    top,
+                    left,
+                    width,
+                    height,
+                    backgroundColor: '#c0c0c0',
+                    border: '2px solid #fff',
+                    borderRightColor: '#000',
+                    borderBottomColor: '#000',
                     display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    fontWeight: 'bold',
-                    fontSize: '13px',
-                    cursor: 'default'
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <span>🕹️</span> {title}
+                    flexDirection: 'column',
+                    zIndex: win.z,
+                    boxShadow: '3px 3px 12px rgba(0,0,0,0.6)',
+                }}
+            >
+                {/* Title Bar */}
+                <div
+                    style={{
+                        backgroundColor: isFocused ? '#000080' : '#808080',
+                        color: '#fff',
+                        padding: '3px 6px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        fontWeight: 'bold',
+                        fontSize: '12px',
+                        letterSpacing: '0.3px',
+                        cursor: 'default',
+                        userSelect: 'none',
+                    }}
+                >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span>{win.icon}</span>
+                        <span>{title}</span>
                     </div>
-                    <button 
-                        onClick={() => toggleWindow(id)}
-                        style={{
-                            backgroundColor: '#c0c0c0',
-                            border: '1px solid #fff',
-                            borderRightColor: '#444',
-                            borderBottomColor: '#444',
-                            padding: '0 4px',
-                            cursor: 'pointer',
-                            fontSize: '11px',
-                            fontWeight: 'bold'
-                        }}
-                    >X</button>
+                    <div style={{ display: 'flex', gap: '3px' }}>
+                        <button
+                            onClick={(e) => minimizeWindow(id, e)}
+                            style={{
+                                backgroundColor: '#c0c0c0',
+                                border: '1px solid #fff',
+                                borderRightColor: '#444',
+                                borderBottomColor: '#444',
+                                padding: '0 5px',
+                                cursor: 'pointer',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                lineHeight: '14px',
+                            }}
+                            title="Minimize"
+                        >
+                            _
+                        </button>
+                        <button
+                            onClick={(e) => closeWindow(id, e)}
+                            style={{
+                                backgroundColor: '#c0c0c0',
+                                border: '1px solid #fff',
+                                borderRightColor: '#444',
+                                borderBottomColor: '#444',
+                                padding: '0 5px',
+                                cursor: 'pointer',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                lineHeight: '14px',
+                            }}
+                            title="Close"
+                        >
+                            ✕
+                        </button>
+                    </div>
                 </div>
-                <div style={{ 
-                    flex: 1, 
-                    overflowY: 'auto', 
-                    padding: id === 'game' ? '0' : '20px', 
-                    backgroundColor: id === 'game' ? '#000' : '#fff',
-                    border: '1px solid #808080',
-                    margin: '2px'
-                }} className="custom-scrollbar">
+
+                {/* Window Body */}
+                <div
+                    style={{
+                        flex: 1,
+                        overflowY: 'auto',
+                        padding: id === 'game' ? '0' : '16px',
+                        backgroundColor: id === 'game' ? '#000' : '#fff',
+                        border: '1px solid #808080',
+                        margin: '2px',
+                    }}
+                    className="custom-scrollbar"
+                >
                     {children}
                 </div>
             </div>
         );
     };
 
-    const DesktopIcon = ({ id, label, icon }: any) => (
-        <div onDoubleClick={() => toggleWindow(id)} style={{ width: '80px', textAlign: 'center', cursor: 'pointer', padding: '10px' }}>
-            <div style={{ fontSize: '42px', filter: 'drop-shadow(2px 2px #000)', transition: 'transform 0.1s' }}
-                 onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
-                 onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
-                {icon}
+    const DesktopIcon = ({ id, label, icon }: { id: string; label: string; icon: string }) => {
+        const win = windows.find(w => w.id === id);
+        const isSelected = win?.active && win?.z === highestZ;
+
+        return (
+            <div
+                onDoubleClick={() => toggleWindow(id)}
+                onClick={() => focusWindow(id)}
+                style={{
+                    width: '84px',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    padding: '8px 4px',
+                    userSelect: 'none',
+                }}
+            >
+                <div
+                    style={{
+                        fontSize: '38px',
+                        filter: 'drop-shadow(2px 2px 2px rgba(0,0,0,0.8))',
+                        transition: 'transform 0.1s',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                >
+                    {icon}
+                </div>
+                <div
+                    style={{
+                        color: '#fff',
+                        fontSize: '11px',
+                        marginTop: '3px',
+                        padding: '1px 3px',
+                        textShadow: '1px 1px #000',
+                        backgroundColor: isSelected ? '#000080' : 'transparent',
+                        display: 'inline-block',
+                        wordBreak: 'break-word',
+                    }}
+                >
+                    {label}
+                </div>
             </div>
-            <div style={{ color: '#fff', fontSize: '11px', marginTop: '4px', textShadow: '1px 1px #000', backgroundColor: windows.find(w => w.id === id)?.active ? '#000080' : 'transparent' }}>
-                {label}
-            </div>
-        </div>
-    );
+        );
+    };
 
     return (
-        <div style={{ 
-            height: '100%', 
-            backgroundColor: '#008080', // Classic Teal
-            position: 'relative',
-            overflow: 'hidden',
-            fontFamily: '"MS Sans Serif", Arial, sans-serif',
-            userSelect: 'none'
-        }}>
-            {/* Desktop Icons */}
-            <div style={{ padding: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div
+            style={{
+                height: '100%',
+                backgroundColor: '#008080', // Classic Windows 95 Teal
+                position: 'relative',
+                overflow: 'hidden',
+                fontFamily: '"MS Sans Serif", Arial, sans-serif',
+                userSelect: 'none',
+            }}
+        >
+            {/* Desktop Icons Grid */}
+            <div
+                style={{
+                    padding: '12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                }}
+            >
                 <DesktopIcon id="cv" label="My Profile" icon="📄" />
                 <DesktopIcon id="projects" label="Projects" icon="📁" />
-                <DesktopIcon id="game" label="Skill Game" icon="🎮" />
+                <DesktopIcon id="skills" label="Skills & Certs" icon="🛡️" />
+                <DesktopIcon id="contact" label="Contact" icon="✉️" />
+                <DesktopIcon id="game" label="Hacking Game" icon="🎮" />
             </div>
 
-            {/* Resume Window */}
-            <Window id="cv" title="Waseeq_Haider_CV.txt">
-                <div style={{ borderBottom: '2px double #000', paddingBottom: '10px', marginBottom: '15px' }}>
-                    <h1 style={{ margin: 0, fontSize: '28px' }}>Waseeq Haider</h1>
-                    <p style={{ margin: '5px 0', color: '#666' }}>Cybersecurity Specialist | Full-Stack Web Developer</p>
-                </div>
-                <h3>[ CORE EXPERTISE ]</h3>
-                <p>Metasploit, Burp Suite, Nmap, Wireshark, React.js, Linux Mastery.</p>
-                <hr />
-                <p>Certified Ethical Hacker (CEH) with a passion for building secure web applications.</p>
+            {/* Resume / Profile Window */}
+            <Window id="cv" title="Waseeq_Haider_Resume.doc" top="4%" left="6%" width="82%" height="86%">
+                <ResumeView />
             </Window>
 
-            {/* Projects Window */}
-            <Window id="projects" title="GitHub Explorer">
-                <GitHubProjects username="waseeq-haider" />
+            {/* Projects Showcase Window */}
+            <Window id="projects" title="C:\Projects\Software_Showcase.exe" top="6%" left="10%" width="80%" height="84%">
+                <FeaturedProjects />
             </Window>
 
-            {/* Game Window */}
-            <Window id="game" title="Security Breach v1.0" width="60%" height="60%">
+            {/* Skills & Certifications Matrix Window */}
+            <Window id="skills" title="C:\System32\Skills_Matrix.exe" top="8%" left="14%" width="76%" height="80%">
+                <SkillsMatrix />
+            </Window>
+
+            {/* Contact Card Window */}
+            <Window id="contact" title="C:\Network\Direct_Contact.exe" top="10%" left="18%" width="64%" height="75%">
+                <ContactCard />
+            </Window>
+
+            {/* Security Breach Game Window */}
+            <Window id="game" title="Security_Breach_Challenge.exe" top="12%" left="16%" width="68%" height="68%">
                 <SkillGame />
             </Window>
 
-            {/* Taskbar */}
-            <div style={{
-                height: '30px',
-                backgroundColor: '#c0c0c0',
-                borderTop: '2px solid #fff',
-                position: 'absolute',
-                bottom: 0,
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                padding: '2px',
-                zIndex: 1000
-            }}>
-                <button style={{
-                    fontWeight: 'bold',
-                    padding: '2px 10px',
-                    backgroundColor: '#c0c0c0',
-                    border: '2px solid #fff',
-                    borderRightColor: '#000',
-                    borderBottomColor: '#000',
-                    height: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px'
-                }}>
-                    <span style={{ fontSize: '16px' }}>🔳</span> Start
-                </button>
-                
-                <div style={{ flex: 1, display: 'flex', gap: '5px', paddingLeft: '10px' }}>
-                    {windows.filter(w => w.active).map(w => (
-                        <div key={w.id} style={{
-                            backgroundColor: '#c0c0c0',
-                            border: '2px solid #000',
-                            borderRightColor: '#fff',
-                            borderBottomColor: '#fff',
-                            padding: '0 10px',
-                            fontSize: '11px',
+            {/* Start Menu Popup */}
+            {startMenuOpen && (
+                <div
+                    ref={startMenuRef}
+                    style={{
+                        position: 'absolute',
+                        bottom: '30px',
+                        left: '2px',
+                        width: '240px',
+                        backgroundColor: '#c0c0c0',
+                        border: '2px solid #fff',
+                        borderRightColor: '#000',
+                        borderBottomColor: '#000',
+                        display: 'flex',
+                        zIndex: 9999,
+                        boxShadow: '3px 3px 10px rgba(0,0,0,0.6)',
+                    }}
+                >
+                    {/* Vertical Side Banner */}
+                    <div
+                        style={{
+                            width: '28px',
+                            backgroundColor: '#000080',
+                            color: '#fff',
+                            writingMode: 'vertical-rl',
+                            transform: 'rotate(180deg)',
                             display: 'flex',
                             alignItems: 'center',
-                            minWidth: '100px'
-                        }}>
-                            {w.icon} {w.id.toUpperCase()}
-                        </div>
-                    ))}
-                </div>
+                            justifyContent: 'center',
+                            padding: '10px 0',
+                            fontWeight: 'bold',
+                            fontSize: '13px',
+                            letterSpacing: '2px',
+                        }}
+                    >
+                        WaseeqOS 98
+                    </div>
 
-                <div style={{
-                    border: '2px solid #808080',
-                    borderRightColor: '#fff',
-                    borderBottomColor: '#fff',
-                    padding: '0 8px',
-                    fontSize: '11px',
-                    height: '100%',
+                    {/* Menu Items */}
+                    <div style={{ flex: 1, padding: '4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        {[
+                            { id: 'cv', icon: '📄', label: 'Waseeq Haider CV' },
+                            { id: 'projects', icon: '📁', label: 'Featured Projects' },
+                            { id: 'skills', icon: '🛡️', label: 'Skills & Certifications' },
+                            { id: 'contact', icon: '✉️', label: 'Contact Info' },
+                            { id: 'game', icon: '🎮', label: 'Security Breach Game' },
+                        ].map((item) => (
+                            <div
+                                key={item.id}
+                                onClick={() => {
+                                    toggleWindow(item.id);
+                                    setStartMenuOpen(false);
+                                }}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '10px',
+                                    padding: '6px 10px',
+                                    fontSize: '11px',
+                                    cursor: 'pointer',
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#000080';
+                                    e.currentTarget.style.color = '#fff';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                    e.currentTarget.style.color = '#000';
+                                }}
+                            >
+                                <span style={{ fontSize: '16px' }}>{item.icon}</span>
+                                <span>{item.label}</span>
+                            </div>
+                        ))}
+
+                        <div style={{ height: '1px', backgroundColor: '#808080', margin: '4px 2px', borderBottom: '1px solid #fff' }} />
+
+                        <a
+                            href="https://github.com/waseeq-haider"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                padding: '6px 10px',
+                                fontSize: '11px',
+                                textDecoration: 'none',
+                                color: '#000',
+                                cursor: 'pointer',
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#000080';
+                                e.currentTarget.style.color = '#fff';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                                e.currentTarget.style.color = '#000';
+                            }}
+                        >
+                            <span style={{ fontSize: '16px' }}>🐙</span>
+                            <span>GitHub Profile ↗</span>
+                        </a>
+
+                        <a
+                            href="https://waseeq-haider.github.io/Portfolio-web/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                padding: '6px 10px',
+                                fontSize: '11px',
+                                textDecoration: 'none',
+                                color: '#000',
+                                cursor: 'pointer',
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#000080';
+                                e.currentTarget.style.color = '#fff';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                                e.currentTarget.style.color = '#000';
+                            }}
+                        >
+                            <span style={{ fontSize: '16px' }}>🌐</span>
+                            <span>Live Web Portfolio ↗</span>
+                        </a>
+                    </div>
+                </div>
+            )}
+
+            {/* Bottom Taskbar */}
+            <div
+                style={{
+                    height: '30px',
+                    backgroundColor: '#c0c0c0',
+                    borderTop: '2px solid #fff',
+                    position: 'absolute',
+                    bottom: 0,
+                    width: '100%',
                     display: 'flex',
                     alignItems: 'center',
-                    backgroundColor: '#c0c0c0'
-                }}>
-                    ⌚ {time}
+                    padding: '2px',
+                    zIndex: 1000,
+                    boxSizing: 'border-box',
+                }}
+            >
+                {/* Start Button */}
+                <button
+                    onClick={() => setStartMenuOpen(!startMenuOpen)}
+                    style={{
+                        fontWeight: 'bold',
+                        padding: '2px 10px',
+                        backgroundColor: '#c0c0c0',
+                        border: '2px solid #fff',
+                        borderRightColor: startMenuOpen ? '#fff' : '#000',
+                        borderBottomColor: startMenuOpen ? '#fff' : '#000',
+                        borderTopColor: startMenuOpen ? '#000' : '#fff',
+                        borderLeftColor: startMenuOpen ? '#000' : '#fff',
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                    }}
+                >
+                    <span style={{ fontSize: '14px' }}>🏁</span> Start
+                </button>
+
+                {/* Open Tasks on Taskbar */}
+                <div style={{ flex: 1, display: 'flex', gap: '4px', paddingLeft: '8px', overflowX: 'auto' }}>
+                    {windows
+                        .filter((w) => w.active)
+                        .map((w) => {
+                            const isFocused = w.z === highestZ;
+                            return (
+                                <button
+                                    key={w.id}
+                                    onClick={() => toggleWindow(w.id)}
+                                    style={{
+                                        backgroundColor: '#c0c0c0',
+                                        border: '2px solid #000',
+                                        borderRightColor: isFocused ? '#000' : '#fff',
+                                        borderBottomColor: isFocused ? '#000' : '#fff',
+                                        borderTopColor: isFocused ? '#808080' : '#fff',
+                                        borderLeftColor: isFocused ? '#808080' : '#fff',
+                                        padding: '0 8px',
+                                        fontSize: '11px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        minWidth: '110px',
+                                        maxWidth: '180px',
+                                        height: '24px',
+                                        fontWeight: isFocused ? 'bold' : 'normal',
+                                        cursor: 'pointer',
+                                        overflow: 'hidden',
+                                        whiteSpace: 'nowrap',
+                                        textOverflow: 'ellipsis',
+                                    }}
+                                >
+                                    <span>{w.icon}</span>
+                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{w.title}</span>
+                                </button>
+                            );
+                        })}
+                </div>
+
+                {/* System Tray & Clock */}
+                <div
+                    style={{
+                        border: '2px solid #808080',
+                        borderRightColor: '#fff',
+                        borderBottomColor: '#fff',
+                        padding: '0 8px',
+                        fontSize: '11px',
+                        height: '22px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        backgroundColor: '#c0c0c0',
+                        marginRight: '4px',
+                    }}
+                >
+                    <span>🛡️</span>
+                    <span>⌚ {time}</span>
                 </div>
             </div>
 
+            {/* Scrollbar & Global Desktop Styles */}
             <style>{`
-                .custom-scrollbar::-webkit-scrollbar { width: 16px; }
-                .custom-scrollbar::-webkit-scrollbar-track { background: #dfdfdf; box-shadow: inset 1px 1px #808080; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: #c0c0c0; border: 1px solid #fff; border-right-color: #808080; border-bottom-color: #808080; }
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 16px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: #dfdfdf;
+                    box-shadow: inset 1px 1px #808080;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: #c0c0c0;
+                    border: 1px solid #fff;
+                    border-right-color: #808080;
+                    border-bottom-color: #808080;
+                }
             `}</style>
         </div>
     );
