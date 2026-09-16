@@ -74,12 +74,20 @@ const FEATURED_PROJECTS: Project[] = [
 const FeaturedProjects: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'featured' | 'github'>('featured');
 
+    const openLink = (url: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        window.open(url, '_blank', 'noopener,noreferrer');
+    };
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             {/* Retro Tabs Header */}
             <div style={{ display: 'flex', gap: '3px', borderBottom: '2px solid #808080', paddingBottom: '2px', marginBottom: '12px' }}>
                 <button
-                    onClick={() => setActiveTab('featured')}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveTab('featured');
+                    }}
                     style={{
                         padding: '5px 14px',
                         fontSize: '12px',
@@ -97,7 +105,10 @@ const FeaturedProjects: React.FC = () => {
                     📁 Featured Software ({FEATURED_PROJECTS.length})
                 </button>
                 <button
-                    onClick={() => setActiveTab('github')}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveTab('github');
+                    }}
                     style={{
                         padding: '5px 14px',
                         fontSize: '12px',
@@ -184,10 +195,8 @@ const FeaturedProjects: React.FC = () => {
                                 </div>
 
                                 {proj.link ? (
-                                    <a
-                                        href={proj.link}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                    <button
+                                        onClick={(e) => openLink(proj.link!, e)}
                                         style={{
                                             display: 'inline-flex',
                                             alignItems: 'center',
@@ -197,14 +206,14 @@ const FeaturedProjects: React.FC = () => {
                                             borderRightColor: '#000',
                                             borderBottomColor: '#000',
                                             padding: '4px 10px',
-                                            textDecoration: 'none',
                                             color: '#000',
                                             fontSize: '11px',
                                             fontWeight: 'bold',
+                                            cursor: 'pointer',
                                         }}
                                     >
                                         <span>🌐</span> Open Live Application ↗
-                                    </a>
+                                    </button>
                                 ) : (
                                     <span
                                         style={{

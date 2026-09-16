@@ -22,29 +22,33 @@ const GitHubProjects = ({ username }: { username: string }) => {
     if (loading) return <div style={{ color: '#000', padding: '20px', textAlign: 'center' }}>Searching local drive...</div>;
 
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '5px', marginTop: '10px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '6px', marginTop: '10px' }}>
             {repos.map(repo => (
-                <a 
+                <div 
                     key={repo.id} 
-                    href={repo.html_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(repo.html_url, '_blank', 'noopener,noreferrer');
+                    }}
                     style={{ 
                         border: '1px solid #808080', 
                         padding: '10px', 
-                        textDecoration: 'none', 
+                        cursor: 'pointer',
                         color: '#000',
                         fontSize: '13px',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '15px',
                         backgroundColor: '#fff',
-                        boxShadow: 'inset -1px -1px #fff, inset 1px 1px #808080'
+                        boxShadow: 'inset -1px -1px #fff, inset 1px 1px #808080',
+                        userSelect: 'none',
                     }}
                 >
                     <div style={{ fontSize: '24px' }}>📁</div>
                     <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 'bold', textDecoration: 'underline' }}>{repo.name}</div>
+                        <div style={{ fontWeight: 'bold', textDecoration: 'underline', color: '#000080' }}>
+                            {repo.name} ↗
+                        </div>
                         <div style={{ fontSize: '11px', color: '#444' }}>
                             {repo.description || 'System file: github_repo_details.dll'}
                         </div>
@@ -53,7 +57,7 @@ const GitHubProjects = ({ username }: { username: string }) => {
                         {repo.language || 'Binary'} <br />
                         {repo.stargazers_count} stars
                     </div>
-                </a>
+                </div>
             ))}
         </div>
     );

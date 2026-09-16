@@ -12,11 +12,225 @@ interface WindowState {
     icon: string;
     active: boolean;
     z: number;
-    minimized?: boolean;
 }
 
-const OS = () => {
+interface WindowProps {
+    id: string;
+    title: string;
+    icon: string;
+    active: boolean;
+    z: number;
+    isFocused: boolean;
+    onFocus: (id: string) => void;
+    onClose: (id: string, e: React.MouseEvent) => void;
+    onMinimize: (id: string, e: React.MouseEvent) => void;
+    children: React.ReactNode;
+    width?: string;
+    height?: string;
+    top?: string;
+    left?: string;
+}
+
+// Declared OUTSIDE OS to prevent unmounting/remounting on state changes
+const Window: React.FC<WindowProps> = ({
+    id,
+    title,
+    icon,
+    active,
+    z,
+    isFocused,
+    onFocus,
+    onClose,
+    onMinimize,
+    children,
+    width = '78%',
+    height = '82%',
+    top = '5%',
+    left = '7%',
+}) => {
+    if (!active) return null;
+
+    return (
+        <div
+            onMouseDown={() => onFocus(id)}
+            style={{
+                position: 'absolute',
+                top,
+                left,
+                width,
+                height,
+                backgroundColor: '#c0c0c0',
+                border: '2px solid #fff',
+                borderRightColor: '#000',
+                borderBottomColor: '#000',
+                display: 'flex',
+                flexDirection: 'column',
+                zIndex: z,
+                boxShadow: '3px 3px 12px rgba(0,0,0,0.6)',
+            }}
+        >
+            {/* Title Bar */}
+            <div
+                style={{
+                    backgroundColor: isFocused ? '#000080' : '#808080',
+                    color: '#fff',
+                    padding: '3px 6px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    fontWeight: 'bold',
+                    fontSize: '12px',
+                    letterSpacing: '0.3px',
+                    cursor: 'default',
+                    userSelect: 'none',
+                }}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span>{icon}</span>
+                    <span>{title}</span>
+                </div>
+                <div style={{ display: 'flex', gap: '3px' }}>
+                    {/* Minus / Minimize Button */}
+                    <button
+                        onMouseDown={(e) => {
+                            e.stopPropagation();
+                        }}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onMinimize(id, e);
+                        }}
+                        style={{
+                            backgroundColor: '#c0c0c0',
+                            border: '1px solid #fff',
+                            borderRightColor: '#444',
+                            borderBottomColor: '#444',
+                            padding: '0 6px',
+                            cursor: 'pointer',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            lineHeight: '14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}
+                        title="Minimize"
+                    >
+                        _
+                    </button>
+                    {/* Cross / Close Button */}
+                    <button
+                        onMouseDown={(e) => {
+                            e.stopPropagation();
+                        }}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onClose(id, e);
+                        }}
+                        style={{
+                            backgroundColor: '#c0c0c0',
+                            border: '1px solid #fff',
+                            borderRightColor: '#444',
+                            borderBottomColor: '#444',
+                            padding: '0 6px',
+                            cursor: 'pointer',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            lineHeight: '14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}
+                        title="Close"
+                    >
+                        ✕
+                    </button>
+                </div>
+            </div>
+
+            {/* Window Body */}
+            <div
+                style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    padding: id === 'game' ? '0' : '16px',
+                    backgroundColor: id === 'game' ? '#000' : '#fff',
+                    border: '1px solid #808080',
+                    margin: '2px',
+                }}
+                className="custom-scrollbar"
+            >
+                {children}
+            </div>
+        </div>
+    );
+};
+
+interface DesktopIconProps {
+    id: string;
+    label: string;
+    icon: string;
+    isSelected: boolean;
+    onOpen: (id: string) => void;
+}
+
+// Declared OUTSIDE OS
+const DesktopIcon: React.FC<DesktopIconProps> = ({ id, label, icon, isSelected, onOpen }) => {
+    return (
+        <div
+            onDoubleClick={() => onOpen(id)}
+            onClick={() => onOpen(id)}
+            style={{
+                width: '84px',
+                textAlign: 'center',
+                cursor: 'pointer',
+                padding: '8px 4px',
+                userSelect: 'none',
+            }}
+        >
+            <div
+                style={{
+                    fontSize: '38px',
+                    filter: 'drop-shadow(2px 2px 2px rgba(0,0,0,0.8))',
+                    transition: 'transform 0.1s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+            >
+                {icon}
+            </div>
+            <div
+                style={{
+                    color: '#fff',
+                    fontSize: '11px',
+                    marginTop: '3px',
+                    padding: '1px 3px',
+                    textShadow: '1px 1px #000',
+                    backgroundColor: isSelected ? '#000080' : 'transparent',
+                    display: 'inline-block',
+                    wordBreak: 'break-word',
+                }}
+            >
+                {label}
+            </div>
+        </div>
+    );
+};
+
+// Independent Clock so second ticks do not re-render OS
+const SystemClock: React.FC = () => {
     const [time, setTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        }, 1000);
+        return () => clearInterval(interval);
+    }, []);
+
+    return <span>⌚ {time}</span>;
+};
+
+const OS: React.FC = () => {
     const [startMenuOpen, setStartMenuOpen] = useState(false);
     const [highestZ, setHighestZ] = useState(10);
     const startMenuRef = useRef<HTMLDivElement>(null);
@@ -28,13 +242,6 @@ const OS = () => {
         { id: 'contact', title: 'C:\\Network\\Direct_Contact.exe', icon: '✉️', active: false, z: 1 },
         { id: 'game', title: 'Security_Breach_Challenge.exe', icon: '🎮', active: false, z: 1 },
     ]);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-        }, 1000);
-        return () => clearInterval(interval);
-    }, []);
 
     // Close start menu when clicking outside
     useEffect(() => {
@@ -48,206 +255,57 @@ const OS = () => {
     }, []);
 
     const focusWindow = (id: string) => {
-        const nextZ = highestZ + 1;
-        setHighestZ(nextZ);
-        setWindows(prev =>
-            prev.map(w => {
-                if (w.id === id) {
-                    return { ...w, active: true, minimized: false, z: nextZ };
-                }
-                return w;
-            })
-        );
+        setHighestZ(prev => {
+            const nextZ = prev + 1;
+            setWindows(curr =>
+                curr.map(w => (w.id === id ? { ...w, active: true, z: nextZ } : w))
+            );
+            return nextZ;
+        });
     };
 
     const toggleWindow = (id: string) => {
-        const win = windows.find(w => w.id === id);
-        if (!win) return;
+        setWindows(prev => {
+            const target = prev.find(w => w.id === id);
+            if (!target) return prev;
 
-        if (!win.active || win.minimized) {
-            focusWindow(id);
-        } else {
-            // Minimize or hide
-            setWindows(prev =>
-                prev.map(w => (w.id === id ? { ...w, active: false } : w))
-            );
-        }
+            if (!target.active) {
+                // Open and focus
+                const nextZ = highestZ + 1;
+                setHighestZ(nextZ);
+                return prev.map(w => (w.id === id ? { ...w, active: true, z: nextZ } : w));
+            } else {
+                // If it's already focused, minimize it
+                if (target.z === highestZ) {
+                    return prev.map(w => (w.id === id ? { ...w, active: false } : w));
+                } else {
+                    // Bring to front
+                    const nextZ = highestZ + 1;
+                    setHighestZ(nextZ);
+                    return prev.map(w => (w.id === id ? { ...w, z: nextZ } : w));
+                }
+            }
+        });
     };
 
     const closeWindow = (id: string, e?: React.MouseEvent) => {
         if (e) e.stopPropagation();
-        setWindows(prev =>
-            prev.map(w => (w.id === id ? { ...w, active: false } : w))
-        );
+        setWindows(prev => prev.map(w => (w.id === id ? { ...w, active: false } : w)));
     };
 
     const minimizeWindow = (id: string, e?: React.MouseEvent) => {
         if (e) e.stopPropagation();
-        setWindows(prev =>
-            prev.map(w => (w.id === id ? { ...w, active: false } : w))
-        );
+        setWindows(prev => prev.map(w => (w.id === id ? { ...w, active: false } : w)));
     };
 
-    const Window = ({
-        id,
-        title,
-        children,
-        width = '78%',
-        height = '82%',
-        top = '5%',
-        left = '7%',
-    }: {
-        id: string;
-        title: string;
-        children: React.ReactNode;
-        width?: string;
-        height?: string;
-        top?: string;
-        left?: string;
-    }) => {
-        const win = windows.find(w => w.id === id);
-        if (!win || !win.active) return null;
-
-        const isFocused = win.z === highestZ;
-
-        return (
-            <div
-                onMouseDown={() => focusWindow(id)}
-                style={{
-                    position: 'absolute',
-                    top,
-                    left,
-                    width,
-                    height,
-                    backgroundColor: '#c0c0c0',
-                    border: '2px solid #fff',
-                    borderRightColor: '#000',
-                    borderBottomColor: '#000',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    zIndex: win.z,
-                    boxShadow: '3px 3px 12px rgba(0,0,0,0.6)',
-                }}
-            >
-                {/* Title Bar */}
-                <div
-                    style={{
-                        backgroundColor: isFocused ? '#000080' : '#808080',
-                        color: '#fff',
-                        padding: '3px 6px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        fontWeight: 'bold',
-                        fontSize: '12px',
-                        letterSpacing: '0.3px',
-                        cursor: 'default',
-                        userSelect: 'none',
-                    }}
-                >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        <span>{win.icon}</span>
-                        <span>{title}</span>
-                    </div>
-                    <div style={{ display: 'flex', gap: '3px' }}>
-                        <button
-                            onClick={(e) => minimizeWindow(id, e)}
-                            style={{
-                                backgroundColor: '#c0c0c0',
-                                border: '1px solid #fff',
-                                borderRightColor: '#444',
-                                borderBottomColor: '#444',
-                                padding: '0 5px',
-                                cursor: 'pointer',
-                                fontSize: '11px',
-                                fontWeight: 'bold',
-                                lineHeight: '14px',
-                            }}
-                            title="Minimize"
-                        >
-                            _
-                        </button>
-                        <button
-                            onClick={(e) => closeWindow(id, e)}
-                            style={{
-                                backgroundColor: '#c0c0c0',
-                                border: '1px solid #fff',
-                                borderRightColor: '#444',
-                                borderBottomColor: '#444',
-                                padding: '0 5px',
-                                cursor: 'pointer',
-                                fontSize: '11px',
-                                fontWeight: 'bold',
-                                lineHeight: '14px',
-                            }}
-                            title="Close"
-                        >
-                            ✕
-                        </button>
-                    </div>
-                </div>
-
-                {/* Window Body */}
-                <div
-                    style={{
-                        flex: 1,
-                        overflowY: 'auto',
-                        padding: id === 'game' ? '0' : '16px',
-                        backgroundColor: id === 'game' ? '#000' : '#fff',
-                        border: '1px solid #808080',
-                        margin: '2px',
-                    }}
-                    className="custom-scrollbar"
-                >
-                    {children}
-                </div>
-            </div>
-        );
+    const openLink = (url: string, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        window.open(url, '_blank', 'noopener,noreferrer');
     };
 
-    const DesktopIcon = ({ id, label, icon }: { id: string; label: string; icon: string }) => {
-        const win = windows.find(w => w.id === id);
-        const isSelected = win?.active && win?.z === highestZ;
-
-        return (
-            <div
-                onDoubleClick={() => toggleWindow(id)}
-                onClick={() => focusWindow(id)}
-                style={{
-                    width: '84px',
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    padding: '8px 4px',
-                    userSelect: 'none',
-                }}
-            >
-                <div
-                    style={{
-                        fontSize: '38px',
-                        filter: 'drop-shadow(2px 2px 2px rgba(0,0,0,0.8))',
-                        transition: 'transform 0.1s',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                >
-                    {icon}
-                </div>
-                <div
-                    style={{
-                        color: '#fff',
-                        fontSize: '11px',
-                        marginTop: '3px',
-                        padding: '1px 3px',
-                        textShadow: '1px 1px #000',
-                        backgroundColor: isSelected ? '#000080' : 'transparent',
-                        display: 'inline-block',
-                        wordBreak: 'break-word',
-                    }}
-                >
-                    {label}
-                </div>
-            </div>
-        );
+    const openWindowFromMenu = (id: string) => {
+        focusWindow(id);
+        setStartMenuOpen(false);
     };
 
     return (
@@ -273,35 +331,135 @@ const OS = () => {
                     left: 0,
                 }}
             >
-                <DesktopIcon id="cv" label="My Profile" icon="📄" />
-                <DesktopIcon id="projects" label="Projects" icon="📁" />
-                <DesktopIcon id="skills" label="Skills & Certs" icon="🛡️" />
-                <DesktopIcon id="contact" label="Contact" icon="✉️" />
-                <DesktopIcon id="game" label="Hacking Game" icon="🎮" />
+                <DesktopIcon
+                    id="cv"
+                    label="My Profile"
+                    icon="📄"
+                    isSelected={Boolean(windows.find(w => w.id === 'cv')?.active && windows.find(w => w.id === 'cv')?.z === highestZ)}
+                    onOpen={focusWindow}
+                />
+                <DesktopIcon
+                    id="projects"
+                    label="Projects"
+                    icon="📁"
+                    isSelected={Boolean(windows.find(w => w.id === 'projects')?.active && windows.find(w => w.id === 'projects')?.z === highestZ)}
+                    onOpen={focusWindow}
+                />
+                <DesktopIcon
+                    id="skills"
+                    label="Skills & Certs"
+                    icon="🛡️"
+                    isSelected={Boolean(windows.find(w => w.id === 'skills')?.active && windows.find(w => w.id === 'skills')?.z === highestZ)}
+                    onOpen={focusWindow}
+                />
+                <DesktopIcon
+                    id="contact"
+                    label="Contact"
+                    icon="✉️"
+                    isSelected={Boolean(windows.find(w => w.id === 'contact')?.active && windows.find(w => w.id === 'contact')?.z === highestZ)}
+                    onOpen={focusWindow}
+                />
+                <DesktopIcon
+                    id="game"
+                    label="Hacking Game"
+                    icon="🎮"
+                    isSelected={Boolean(windows.find(w => w.id === 'game')?.active && windows.find(w => w.id === 'game')?.z === highestZ)}
+                    onOpen={focusWindow}
+                />
             </div>
 
             {/* Resume / Profile Window */}
-            <Window id="cv" title="Waseeq_Haider_Resume.doc" top="4%" left="6%" width="82%" height="86%">
+            <Window
+                id="cv"
+                title="Waseeq_Haider_Resume.doc"
+                icon="📄"
+                active={windows.find(w => w.id === 'cv')?.active || false}
+                z={windows.find(w => w.id === 'cv')?.z || 1}
+                isFocused={windows.find(w => w.id === 'cv')?.z === highestZ}
+                onFocus={focusWindow}
+                onClose={closeWindow}
+                onMinimize={minimizeWindow}
+                top="4%"
+                left="6%"
+                width="82%"
+                height="86%"
+            >
                 <ResumeView />
             </Window>
 
             {/* Projects Showcase Window */}
-            <Window id="projects" title="C:\Projects\Software_Showcase.exe" top="6%" left="10%" width="80%" height="84%">
+            <Window
+                id="projects"
+                title="C:\Projects\Software_Showcase.exe"
+                icon="📁"
+                active={windows.find(w => w.id === 'projects')?.active || false}
+                z={windows.find(w => w.id === 'projects')?.z || 1}
+                isFocused={windows.find(w => w.id === 'projects')?.z === highestZ}
+                onFocus={focusWindow}
+                onClose={closeWindow}
+                onMinimize={minimizeWindow}
+                top="6%"
+                left="10%"
+                width="80%"
+                height="84%"
+            >
                 <FeaturedProjects />
             </Window>
 
             {/* Skills & Certifications Matrix Window */}
-            <Window id="skills" title="C:\System32\Skills_Matrix.exe" top="8%" left="14%" width="76%" height="80%">
+            <Window
+                id="skills"
+                title="C:\System32\Skills_Matrix.exe"
+                icon="🛡️"
+                active={windows.find(w => w.id === 'skills')?.active || false}
+                z={windows.find(w => w.id === 'skills')?.z || 1}
+                isFocused={windows.find(w => w.id === 'skills')?.z === highestZ}
+                onFocus={focusWindow}
+                onClose={closeWindow}
+                onMinimize={minimizeWindow}
+                top="8%"
+                left="14%"
+                width="76%"
+                height="80%"
+            >
                 <SkillsMatrix />
             </Window>
 
             {/* Contact Card Window */}
-            <Window id="contact" title="C:\Network\Direct_Contact.exe" top="10%" left="18%" width="64%" height="75%">
+            <Window
+                id="contact"
+                title="C:\Network\Direct_Contact.exe"
+                icon="✉️"
+                active={windows.find(w => w.id === 'contact')?.active || false}
+                z={windows.find(w => w.id === 'contact')?.z || 1}
+                isFocused={windows.find(w => w.id === 'contact')?.z === highestZ}
+                onFocus={focusWindow}
+                onClose={closeWindow}
+                onMinimize={minimizeWindow}
+                top="10%"
+                left="18%"
+                width="64%"
+                height="75%"
+            >
                 <ContactCard />
             </Window>
 
             {/* Security Breach Game Window */}
-            <Window id="game" title="Security_Breach_Challenge.exe" top="12%" left="16%" width="68%" height="68%">
+            <Window
+                id="game"
+                title="Security_Breach_Challenge.exe"
+                icon="🎮"
+                active={windows.find(w => w.id === 'game')?.active || false}
+                z={windows.find(w => w.id === 'game')?.z || 1}
+                isFocused={windows.find(w => w.id === 'game')?.z === highestZ}
+                onFocus={focusWindow}
+                onClose={closeWindow}
+                onMinimize={minimizeWindow}
+                top="12%"
+                left="16%"
+                width="68%"
+                height="68%"
+            >
                 <SkillGame />
             </Window>
 
@@ -309,6 +467,7 @@ const OS = () => {
             {startMenuOpen && (
                 <div
                     ref={startMenuRef}
+                    onMouseDown={(e) => e.stopPropagation()}
                     style={{
                         position: 'absolute',
                         bottom: '30px',
@@ -354,10 +513,7 @@ const OS = () => {
                         ].map((item) => (
                             <div
                                 key={item.id}
-                                onClick={() => {
-                                    toggleWindow(item.id);
-                                    setStartMenuOpen(false);
-                                }}
+                                onClick={() => openWindowFromMenu(item.id)}
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
@@ -382,17 +538,17 @@ const OS = () => {
 
                         <div style={{ height: '1px', backgroundColor: '#808080', margin: '4px 2px', borderBottom: '1px solid #fff' }} />
 
-                        <a
-                            href="https://github.com/waseeq-haider"
-                            target="_blank"
-                            rel="noopener noreferrer"
+                        <div
+                            onClick={(e) => {
+                                openLink('https://github.com/waseeq-haider', e);
+                                setStartMenuOpen(false);
+                            }}
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '10px',
                                 padding: '6px 10px',
                                 fontSize: '11px',
-                                textDecoration: 'none',
                                 color: '#000',
                                 cursor: 'pointer',
                             }}
@@ -407,19 +563,19 @@ const OS = () => {
                         >
                             <span style={{ fontSize: '16px' }}>🐙</span>
                             <span>GitHub Profile ↗</span>
-                        </a>
+                        </div>
 
-                        <a
-                            href="https://waseeq-haider.github.io/Portfolio-web/"
-                            target="_blank"
-                            rel="noopener noreferrer"
+                        <div
+                            onClick={(e) => {
+                                openLink('https://waseeq.vercel.app/', e);
+                                setStartMenuOpen(false);
+                            }}
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '10px',
                                 padding: '6px 10px',
                                 fontSize: '11px',
-                                textDecoration: 'none',
                                 color: '#000',
                                 cursor: 'pointer',
                             }}
@@ -434,7 +590,7 @@ const OS = () => {
                         >
                             <span style={{ fontSize: '16px' }}>🌐</span>
                             <span>Live Web Portfolio ↗</span>
-                        </a>
+                        </div>
                     </div>
                 </div>
             )}
@@ -457,7 +613,8 @@ const OS = () => {
             >
                 {/* Start Button */}
                 <button
-                    onClick={() => setStartMenuOpen(!startMenuOpen)}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={() => setStartMenuOpen(prev => !prev)}
                     style={{
                         fontWeight: 'bold',
                         padding: '2px 10px',
@@ -487,6 +644,7 @@ const OS = () => {
                             return (
                                 <button
                                     key={w.id}
+                                    onMouseDown={(e) => e.stopPropagation()}
                                     onClick={() => toggleWindow(w.id)}
                                     style={{
                                         backgroundColor: '#c0c0c0',
@@ -534,7 +692,7 @@ const OS = () => {
                     }}
                 >
                     <span>🛡️</span>
-                    <span>⌚ {time}</span>
+                    <SystemClock />
                 </div>
             </div>
 
